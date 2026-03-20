@@ -1,0 +1,60 @@
+package com.attendance.backend.dto.admin;
+
+import java.time.LocalTime;
+
+public class CompanySettingResponse {
+
+    private final Long companyId;
+    private final String companyName;
+    private final Double latitude;
+    private final Double longitude;
+    private final Integer allowedRadiusMeters;
+    private final LocalTime lateAfterTime;
+    private final String message;
+
+    public CompanySettingResponse(
+        Long companyId,
+        String companyName,
+        Double latitude,
+        Double longitude,
+        Integer allowedRadiusMeters,
+        LocalTime lateAfterTime,
+        String message
+    ) {
+        this.companyId = companyId;
+        this.companyName = companyName;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.allowedRadiusMeters = allowedRadiusMeters;
+        this.lateAfterTime = lateAfterTime;
+        this.message = message;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public Integer getAllowedRadiusMeters() {
+        return allowedRadiusMeters;
+    }
+
+    public LocalTime getLateAfterTime() {
+        return lateAfterTime;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
