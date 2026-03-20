@@ -79,14 +79,63 @@ export DB_URL=jdbc:postgresql://localhost:5432/attendance_db
 export DB_USERNAME=postgres
 export DB_PASSWORD=postgres
 export JWT_SECRET=your-very-long-jwt-secret-key
-./gradlew bootRun
+./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 
 Gradle Wrapper가 없다면:
 
 ```bash
-gradle bootRun
+gradle bootRun --args='--spring.profiles.active=local'
 ```
+
+## 로컬 개발 실행 절차
+
+현재 로컬 개발 기준은 다음과 같습니다.
+
+- backend: `local` 프로필로 로컬에서 직접 `8080` 포트로 실행
+- mobile: 로컬 backend 주소로 연결
+- 기준 API 주소: `http://192.168.123.101:8080/api`
+- 로컬 DB: H2 file DB (`src/main/resources/application-local.yml`)
+
+backend 실행:
+
+```bash
+cd /Users/hyeonseobkim/workspace/attendance-app/backend
+gradle bootRun --args='--spring.profiles.active=local'
+```
+
+또는 전용 task:
+
+```bash
+cd /Users/hyeonseobkim/workspace/attendance-app/backend
+gradle bootRunLocal
+```
+
+backend 확인:
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "employeeCode": "ADMIN001",
+    "password": "admin1234"
+  }'
+```
+
+mobile 실행:
+
+```bash
+cd /Users/hyeonseobkim/workspace/attendance-app/mobile
+npm run start:local
+```
+
+모바일 API 기본값 파일:
+
+- `/Users/hyeonseobkim/workspace/attendance-app/mobile/src/services/api.js`
+
+로컬 프로필 설정 파일:
+
+- `/Users/hyeonseobkim/workspace/attendance-app/backend/src/main/resources/application-local.yml`
 
 ## Docker Compose 실행
 

@@ -36,3 +36,11 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.register('bootRunLocal', org.springframework.boot.gradle.tasks.run.BootRun) {
+    group = 'application'
+    description = 'Run the application with the local Spring profile.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.attendance.backend.AttendanceBackendApplication'
+    systemProperty 'spring.profiles.active', 'local'
+}
