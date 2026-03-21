@@ -22,6 +22,7 @@ import com.attendance.backend.service.CustomUserDetailsService;
 import com.attendance.backend.security.RestAuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 import org.springframework.security.config.Customizer;
@@ -61,6 +62,7 @@ public class SecurityConfig {
                 .accessDeniedHandler(restAccessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers("/error").permitAll()
