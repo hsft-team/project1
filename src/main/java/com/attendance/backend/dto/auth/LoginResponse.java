@@ -9,6 +9,7 @@ public class LoginResponse {
     private final String employeeName;
     private final String companyName;
     private final String role;
+    private final String accessTokenExpiresAt;
 
     public LoginResponse(
         String accessToken,
@@ -17,7 +18,8 @@ public class LoginResponse {
         String employeeCode,
         String employeeName,
         String companyName,
-        String role
+        String role,
+        String accessTokenExpiresAt
     ) {
         this.accessToken = accessToken;
         this.tokenType = tokenType;
@@ -26,6 +28,7 @@ public class LoginResponse {
         this.employeeName = employeeName;
         this.companyName = companyName;
         this.role = role;
+        this.accessTokenExpiresAt = accessTokenExpiresAt;
     }
 
     public String getAccessToken() {
@@ -54,5 +57,9 @@ public class LoginResponse {
 
     public String getRole() {
         return role;
+    }
+
+    public String getAccessTokenExpiresAt() {
+        return accessTokenExpiresAt;
     }
 }

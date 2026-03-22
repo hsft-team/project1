@@ -14,12 +14,14 @@ public class CustomUserDetails implements UserDetails {
     private final String employeeCode;
     private final String password;
     private final EmployeeRole role;
+    private final String registeredDeviceId;
 
     public CustomUserDetails(Employee employee) {
         this.employeeId = employee.getId();
         this.employeeCode = employee.getEmployeeCode();
         this.password = employee.getPassword();
         this.role = employee.getRole();
+        this.registeredDeviceId = employee.getRegisteredDeviceId();
     }
 
     public Long getEmployeeId() {
@@ -28,6 +30,10 @@ public class CustomUserDetails implements UserDetails {
 
     public EmployeeRole getRole() {
         return role;
+    }
+
+    public String getRegisteredDeviceId() {
+        return registeredDeviceId;
     }
 
     @Override

@@ -20,7 +20,7 @@ server:
 
 jwt:
   secret: ${JWT_SECRET:change-me-change-me-change-me-change-me-very-secret-key}
-  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:86400}
+  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:31536000}
 
 logging:
   level:

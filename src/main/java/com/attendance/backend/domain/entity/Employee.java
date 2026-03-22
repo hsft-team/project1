@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
@@ -44,6 +45,15 @@ public class Employee extends BaseTimeEntity {
 
     @Column(name = "work_end_time")
     private LocalTime workEndTime;
+
+    @Column(name = "registered_device_id", length = 120)
+    private String registeredDeviceId;
+
+    @Column(name = "registered_device_name", length = 200)
+    private String registeredDeviceName;
+
+    @Column(name = "device_registered_at")
+    private LocalDateTime deviceRegisteredAt;
 
     protected Employee() {
     }
@@ -98,5 +108,37 @@ public class Employee extends BaseTimeEntity {
 
     public LocalTime getWorkEndTime() {
         return workEndTime;
+    }
+
+    public String getRegisteredDeviceId() {
+        return registeredDeviceId;
+    }
+
+    public String getRegisteredDeviceName() {
+        return registeredDeviceName;
+    }
+
+    public LocalDateTime getDeviceRegisteredAt() {
+        return deviceRegisteredAt;
+    }
+
+    public boolean hasRegisteredDevice() {
+        return registeredDeviceId != null && !registeredDeviceId.isBlank();
+    }
+
+    public boolean isRegisteredDevice(String deviceId) {
+        return hasRegisteredDevice() && registeredDeviceId.equals(deviceId);
+    }
+
+    public void registerDevice(String deviceId, String deviceName) {
+        this.registeredDeviceId = deviceId;
+        this.registeredDeviceName = deviceName;
+        this.deviceRegisteredAt = LocalDateTime.now();
+    }
+
+    public void resetRegisteredDevice() {
+        this.registeredDeviceId = null;
+        this.registeredDeviceName = null;
+        this.deviceRegisteredAt = null;
     }
 }

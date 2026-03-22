@@ -10,6 +10,11 @@ public class LoginRequest {
     @NotBlank
     private String password;
 
+    @NotBlank
+    private String deviceId;
+
+    private String deviceName;
+
     public String getEmployeeCode() {
         return employeeCode;
     }
@@ -24,5 +29,21 @@ public class LoginRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 }
