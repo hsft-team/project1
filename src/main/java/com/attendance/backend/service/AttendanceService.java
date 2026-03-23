@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class AttendanceService {
     private static final double MAX_LOCATION_ACCURACY_METERS = 100;
     private static final Duration MAX_LOCATION_AGE = Duration.ofMinutes(2);
     private static final Duration MAX_FUTURE_SKEW = Duration.ofSeconds(30);
+    private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
 
     private final EmployeeRepository employeeRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
@@ -58,7 +60,7 @@ public class AttendanceService {
     @Transactional
     public CheckInResponse checkIn(Long employeeId, CheckInRequest request) {
         Employee employee = getEmployee(employeeId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = currentDateInSeoul();
         Double distanceMeters = null;
 
         try {
@@ -80,7 +82,7 @@ public class AttendanceService {
                 "출근"
             );
 
-            LocalDateTime checkInTime = LocalDateTime.now();
+            LocalDateTime checkInTime = currentDateTimeInSeoul();
             LocalTime lateReferenceTime = employee.getWorkStartTime() == null
                 ? companySetting.getLateAfterTime()
                 : employee.getWorkStartTime();
@@ -113,7 +115,7 @@ public class AttendanceService {
     @Transactional
     public CheckOutResponse checkOut(Long employeeId, CheckOutRequest request) {
         Employee employee = getEmployee(employeeId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = currentDateInSeoul();
         Double distanceMeters = null;
 
         try {
@@ -122,7 +124,7 @@ public class AttendanceService {
                 .orElseThrow(() -> new BusinessException("오늘 출근 기록이 없어 퇴근 처리할 수 없습니다."));
             boolean alreadyCheckedOut = record.getCheckOutTime() != null;
 
-            record.checkOut(LocalDateTime.now(), request.getLatitude(), request.getLongitude());
+            record.checkOut(currentDateTimeInSeoul(), request.getLatitude(), request.getLongitude());
             String message = alreadyCheckedOut
                 ? "퇴근 시간이 최신 시각으로 업데이트되었습니다."
                 : "퇴근이 정상 처리되었습니다.";
@@ -144,7 +146,8 @@ public class AttendanceService {
 
     public TodayAttendanceStatusResponse getTodayStatus(Long employeeId) {
         Employee employee = getEmployee(employeeId);
-        return attendanceRecordRepository.findByEmployeeIdAndAttendanceDate(employeeId, LocalDate.now())
+        LocalDate today = currentDateInSeoul();
+        return attendanceRecordRepository.findByEmployeeIdAndAttendanceDate(employeeId, today)
             .map(record -> new TodayAttendanceStatusResponse(
                 true,
                 record.getAttendanceDate(),
@@ -155,7 +158,7 @@ public class AttendanceService {
             ))
             .orElseGet(() -> new TodayAttendanceStatusResponse(
                 false,
-                LocalDate.now(),
+                today,
                 null,
                 null,
                 null,
@@ -205,6 +208,14 @@ public class AttendanceService {
     private CompanySetting getCompanySetting(Company company) {
         return companySettingRepository.findByCompany(company)
             .orElseThrow(() -> new ResourceNotFoundException("회사 설정을 찾을 수 없습니다."));
+    }
+
+    private LocalDate currentDateInSeoul() {
+        return LocalDate.now(SEOUL_ZONE_ID);
+    }
+
+    private LocalDateTime currentDateTimeInSeoul() {
+        return LocalDateTime.now(SEOUL_ZONE_ID);
     }
 
     private boolean isLate(LocalTime checkInTime, LocalTime lateAfterTime) {

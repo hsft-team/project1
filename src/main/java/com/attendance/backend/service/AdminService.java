@@ -18,6 +18,7 @@ import com.attendance.backend.exception.ResourceNotFoundException;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -28,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class AdminService {
+
+    private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
 
     private final EmployeeRepository employeeRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
@@ -64,7 +67,7 @@ public class AdminService {
 
     public List<TodayAttendanceOverviewResponse> getTodayAttendance(Long adminEmployeeId) {
         Employee admin = getEmployee(adminEmployeeId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(SEOUL_ZONE_ID);
 
         List<Employee> employees = employeeRepository.findAllByCompanyIdAndDeletedFalseOrderByNameAsc(admin.getCompany().getId());
         Map<Long, AttendanceRecord> recordsByEmployeeId =
