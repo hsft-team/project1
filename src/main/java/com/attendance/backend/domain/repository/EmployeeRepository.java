@@ -15,4 +15,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     @EntityGraph(attributePaths = {"company"})
     java.util.List<Employee> findAllByCompanyIdAndActiveTrueOrderByNameAsc(Long companyId);
+
+    @EntityGraph(attributePaths = {"company"})
+    java.util.List<Employee> findAllByCompanyIdAndDeletedFalseOrderByNameAsc(Long companyId);
+
+    @EntityGraph(attributePaths = {"company"})
+    java.util.List<Employee> findAllByCompanyIdAndActiveTrueAndDeletedFalseOrderByNameAsc(Long companyId);
 }

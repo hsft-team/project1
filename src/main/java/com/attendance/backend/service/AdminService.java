@@ -51,7 +51,7 @@ public class AdminService {
 
     public List<EmployeeSummaryResponse> getEmployees(Long adminEmployeeId) {
         Employee admin = getEmployee(adminEmployeeId);
-        return employeeRepository.findAllByCompanyIdOrderByNameAsc(admin.getCompany().getId()).stream()
+        return employeeRepository.findAllByCompanyIdAndDeletedFalseOrderByNameAsc(admin.getCompany().getId()).stream()
             .map(employee -> new EmployeeSummaryResponse(
                 employee.getId(),
                 employee.getEmployeeCode(),
@@ -66,7 +66,7 @@ public class AdminService {
         Employee admin = getEmployee(adminEmployeeId);
         LocalDate today = LocalDate.now();
 
-        List<Employee> employees = employeeRepository.findAllByCompanyIdOrderByNameAsc(admin.getCompany().getId());
+        List<Employee> employees = employeeRepository.findAllByCompanyIdAndDeletedFalseOrderByNameAsc(admin.getCompany().getId());
         Map<Long, AttendanceRecord> recordsByEmployeeId =
             attendanceRecordRepository.findAllByEmployeeCompanyIdAndAttendanceDate(admin.getCompany().getId(), today)
                 .stream()
@@ -101,7 +101,7 @@ public class AdminService {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        List<Employee> employees = employeeRepository.findAllByCompanyIdOrderByNameAsc(admin.getCompany().getId());
+        List<Employee> employees = employeeRepository.findAllByCompanyIdAndDeletedFalseOrderByNameAsc(admin.getCompany().getId());
         List<AttendanceRecord> records = attendanceRecordRepository.findAllByEmployeeCompanyIdAndAttendanceDateBetween(
             admin.getCompany().getId(),
             startDate,
