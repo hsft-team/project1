@@ -7,7 +7,6 @@ public class LoginRequest {
     @NotBlank
     private String employeeCode;
 
-    @NotBlank
     private String password;
 
     @NotBlank

@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @Transactional(readOnly = true)
@@ -40,16 +41,25 @@ public class AuthService {
         Employee employee = employeeRepository.findByEmployeeCode(request.getEmployeeCode())
             .orElseThrow(() -> new UnauthorizedException("사번 또는 비밀번호가 올바르지 않습니다."));
 
-        if (!passwordEncoder.matches(request.getPassword(), employee.getPassword())) {
-            throw new UnauthorizedException("사번 또는 비밀번호가 올바르지 않습니다.");
-        }
-
         if (employee.isDeleted()) {
             throw new UnauthorizedException("삭제된 계정입니다. 관리자에게 문의해 주세요.");
         }
 
         if (!employee.isActive()) {
             throw new UnauthorizedException("사용이 중지된 계정입니다. 관리자에게 문의해 주세요.");
+        }
+
+        boolean allowsPasswordlessFirstLogin =
+            employee.getRole() == EmployeeRole.EMPLOYEE && employee.isPasswordChangeRequired();
+        String requestPassword = request.getPassword();
+        boolean passwordProvided = StringUtils.hasText(requestPassword);
+
+        if (!allowsPasswordlessFirstLogin && !passwordProvided) {
+            throw new UnauthorizedException("사번 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        if (passwordProvided && !passwordEncoder.matches(requestPassword, employee.getPassword())) {
+            throw new UnauthorizedException("사번 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String normalizedDeviceId = request.getDeviceId().trim();
@@ -82,11 +92,19 @@ public class AuthService {
         Employee employee = employeeRepository.findById(employeeId)
             .orElseThrow(() -> new UnauthorizedException("사용자를 찾을 수 없습니다."));
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), employee.getPassword())) {
+        boolean canSkipCurrentPassword =
+            employee.getRole() == EmployeeRole.EMPLOYEE && employee.isPasswordChangeRequired();
+        String currentPassword = request.getCurrentPassword();
+
+        if (!canSkipCurrentPassword && !StringUtils.hasText(currentPassword)) {
             throw new UnauthorizedException("현재 비밀번호가 올바르지 않습니다.");
         }
 
-        if (request.getCurrentPassword().equals(request.getNewPassword())) {
+        if (!canSkipCurrentPassword && !passwordEncoder.matches(currentPassword, employee.getPassword())) {
+            throw new UnauthorizedException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), employee.getPassword())) {
             throw new BusinessException("새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.");
         }
 
