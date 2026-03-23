@@ -9,6 +9,7 @@ public class LoginResponse {
     private final String employeeName;
     private final String companyName;
     private final String role;
+    private final boolean passwordChangeRequired;
     private final String accessTokenExpiresAt;
 
     public LoginResponse(
@@ -19,6 +20,7 @@ public class LoginResponse {
         String employeeName,
         String companyName,
         String role,
+        boolean passwordChangeRequired,
         String accessTokenExpiresAt
     ) {
         this.accessToken = accessToken;
@@ -28,6 +30,7 @@ public class LoginResponse {
         this.employeeName = employeeName;
         this.companyName = companyName;
         this.role = role;
+        this.passwordChangeRequired = passwordChangeRequired;
         this.accessTokenExpiresAt = accessTokenExpiresAt;
     }
 
@@ -57,6 +60,10 @@ public class LoginResponse {
 
     public String getRole() {
         return role;
+    }
+
+    public boolean isPasswordChangeRequired() {
+        return passwordChangeRequired;
     }
 
     public String getAccessTokenExpiresAt() {

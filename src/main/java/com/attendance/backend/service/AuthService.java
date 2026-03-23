@@ -1,9 +1,13 @@
 package com.attendance.backend.service;
 
 import com.attendance.backend.domain.entity.Employee;
+import com.attendance.backend.domain.entity.EmployeeRole;
 import com.attendance.backend.domain.repository.EmployeeRepository;
+import com.attendance.backend.dto.auth.ChangePasswordRequest;
+import com.attendance.backend.dto.auth.ChangePasswordResponse;
 import com.attendance.backend.dto.auth.LoginRequest;
 import com.attendance.backend.dto.auth.LoginResponse;
+import com.attendance.backend.exception.BusinessException;
 import com.attendance.backend.exception.UnauthorizedException;
 import com.attendance.backend.security.JwtTokenProvider;
 import java.time.format.DateTimeFormatter;
@@ -64,7 +68,27 @@ public class AuthService {
             employee.getName(),
             employee.getCompany().getName(),
             employee.getRole().name(),
+            employee.getRole() == EmployeeRole.EMPLOYEE && employee.isPasswordChangeRequired(),
             accessTokenExpiresAt
         );
+    }
+
+    @Transactional
+    public ChangePasswordResponse changePassword(Long employeeId, ChangePasswordRequest request) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new UnauthorizedException("사용자를 찾을 수 없습니다."));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), employee.getPassword())) {
+            throw new UnauthorizedException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        if (request.getCurrentPassword().equals(request.getNewPassword())) {
+            throw new BusinessException("새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.");
+        }
+
+        employee.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+        employee.markPasswordChanged();
+
+        return new ChangePasswordResponse("비밀번호가 변경되었습니다.");
     }
 }
