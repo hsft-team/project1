@@ -122,18 +122,6 @@ public class AttendanceService {
                 .orElseThrow(() -> new BusinessException("오늘 출근 기록이 없어 퇴근 처리할 수 없습니다."));
             boolean alreadyCheckedOut = record.getCheckOutTime() != null;
 
-            Company company = employee.getCompany();
-            CompanySetting companySetting = getCompanySetting(company);
-            distanceMeters = validateLocationProof(
-                request.getLatitude(),
-                request.getLongitude(),
-                request.getAccuracyMeters(),
-                request.getCapturedAt(),
-                company,
-                companySetting,
-                "퇴근"
-            );
-
             record.checkOut(LocalDateTime.now(), request.getLatitude(), request.getLongitude());
             String message = alreadyCheckedOut
                 ? "퇴근 시간이 최신 시각으로 업데이트되었습니다."
@@ -187,6 +175,7 @@ public class AttendanceService {
             company.getLongitude(),
             setting.getAllowedRadiusMeters(),
             setting.getLateAfterTime(),
+            setting.getNoticeMessage(),
             "회사 설정 조회가 완료되었습니다."
         );
     }
@@ -203,6 +192,7 @@ public class AttendanceService {
             company.getLongitude(),
             setting.getAllowedRadiusMeters(),
             setting.getLateAfterTime(),
+            setting.getNoticeMessage(),
             "회사 설정 조회가 완료되었습니다."
         );
     }

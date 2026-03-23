@@ -127,6 +127,7 @@ public class AdminService {
             company.getLongitude(),
             setting.getAllowedRadiusMeters(),
             setting.getLateAfterTime(),
+            setting.getNoticeMessage(),
             "회사 위치가 수정되었습니다."
         );
     }
@@ -147,6 +148,7 @@ public class AdminService {
             company.getLongitude(),
             setting.getAllowedRadiusMeters(),
             setting.getLateAfterTime(),
+            setting.getNoticeMessage(),
             "출근 반경이 수정되었습니다."
         );
     }

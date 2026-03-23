@@ -10,6 +10,7 @@ public class CompanySettingResponse {
     private final Double longitude;
     private final Integer allowedRadiusMeters;
     private final LocalTime lateAfterTime;
+    private final String noticeMessage;
     private final String message;
 
     public CompanySettingResponse(
@@ -19,6 +20,7 @@ public class CompanySettingResponse {
         Double longitude,
         Integer allowedRadiusMeters,
         LocalTime lateAfterTime,
+        String noticeMessage,
         String message
     ) {
         this.companyId = companyId;
@@ -27,6 +29,7 @@ public class CompanySettingResponse {
         this.longitude = longitude;
         this.allowedRadiusMeters = allowedRadiusMeters;
         this.lateAfterTime = lateAfterTime;
+        this.noticeMessage = noticeMessage;
         this.message = message;
     }
 
@@ -52,6 +55,10 @@ public class CompanySettingResponse {
 
     public LocalTime getLateAfterTime() {
         return lateAfterTime;
+    }
+
+    public String getNoticeMessage() {
+        return noticeMessage;
     }
 
     public String getMessage() {
