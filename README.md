@@ -243,18 +243,6 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod down
 - 운영에서는 `.env.prod` 에 강한 `POSTGRES_PASSWORD`, `JWT_SECRET` 을 사용하세요.
 - 현재 설정은 HTTP 기준입니다. 도메인 연결 후 HTTPS는 Nginx + Certbot 또는 Cloudflare Tunnel/Proxy로 추가하는 것을 권장합니다.
 
-## GitHub Actions 자동 배포
-
-운영 배포는 `GitHub Actions -> Amazon ECR -> AWS App Runner` 흐름으로 구성할 수 있습니다.
-
-- 워크플로 파일: [.github/workflows/deploy.yml](/Users/hyeonseobkim/workspace/attendance-app/backend/.github/workflows/deploy.yml)
-- 배포 가이드: [docs/AWS_DEPLOYMENT.md](/Users/hyeonseobkim/workspace/attendance-app/backend/docs/AWS_DEPLOYMENT.md)
-
-필요한 GitHub 설정:
-
-- Variable: `AWS_REGION`
-- Variable: `ECR_REPOSITORY`
-
 ## GitHub Self-Hosted Runner 배포
 
 미니PC를 self-hosted runner 로 등록하면 GitHub 웹 UI에서 원격 배포를 실행할 수 있습니다.
