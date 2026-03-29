@@ -218,6 +218,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\deploy-prod.ps1
 - [restart-prod.ps1](/Users/hyeonseobkim/workspace/attendance-app/backend/scripts/restart-prod.ps1)
 - [restart-prod.bat](/Users/hyeonseobkim/workspace/attendance-app/backend/scripts/restart-prod.bat)
 
+## DB 테이블 명세
+
+SQL 리포트 작성용 테이블 구조 문서:
+
+- [docs/DB_TABLE_SPEC.md](/Users/hyeonseobkim/workspace/attendance-app/backend/docs/DB_TABLE_SPEC.md)
+
 미니PC에서 `C:\attendance-app\backend\scripts\restart-prod.bat` 를 더블클릭하면 GitHub pull 없이 현재 코드 기준으로 재빌드/재기동만 수행합니다.
 
 다른 브랜치를 배포할 때:
