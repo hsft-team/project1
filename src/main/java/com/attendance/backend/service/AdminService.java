@@ -224,10 +224,6 @@ public class AdminService {
             throw new BusinessException("삭제된 직원은 초대 링크를 생성할 수 없습니다.");
         }
 
-        if (employee.getRole() == EmployeeRole.ADMIN) {
-            throw new BusinessException("관리자 계정은 목록에서 초대 링크를 생성할 수 없습니다.");
-        }
-
         String inviteToken = UUID.randomUUID().toString() + UUID.randomUUID().toString().replace("-", "");
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(inviteProperties.getExpirationHours());
         employeeInviteRepository.save(new EmployeeInvite(inviteToken, employee, expiresAt));
