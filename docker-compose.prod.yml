@@ -47,6 +47,9 @@ services:
       - "80:80"
     volumes:
       - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # 공매딜스캔 (gm.dealscan.co.kr) — 같은 호스트의 jubjub docker compose 가 18080/13000 으로 노출.
+      # 운영 서버 디렉터리: C:/dealscan/jubjub
+      - C:/dealscan/jubjub/infra/nginx/jubjub-prod.conf:/etc/nginx/conf.d/jubjub-prod.conf:ro
 
 volumes:
   postgres_data:
