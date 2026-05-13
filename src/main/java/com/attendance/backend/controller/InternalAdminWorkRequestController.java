@@ -88,6 +88,18 @@ public class InternalAdminWorkRequestController {
         return ResponseEntity.ok(workRequestService.rejectRequest(adminEmployeeCode, requestId, reviewNote));
     }
 
+    @PostMapping("/{requestId}/cancel")
+    public ResponseEntity<InternalWorkRequestResponse> cancel(
+        @RequestHeader(API_KEY_HEADER) String apiKey,
+        @RequestHeader(ADMIN_CODE_HEADER) String adminEmployeeCode,
+        @PathVariable Long requestId,
+        @RequestBody(required = false) InternalWorkRequestReviewRequest request
+    ) {
+        validateHeaders(apiKey, adminEmployeeCode);
+        String reviewNote = request == null ? null : request.getReviewNote();
+        return ResponseEntity.ok(workRequestService.cancelRequestForAdmin(adminEmployeeCode, requestId, reviewNote));
+    }
+
     private void validateHeaders(String apiKey, String adminEmployeeCode) {
         if (!StringUtils.hasText(internalApiProperties.getKey()) || !internalApiProperties.getKey().equals(apiKey)) {
             throw new BusinessException("내부 API 인증에 실패했습니다.");

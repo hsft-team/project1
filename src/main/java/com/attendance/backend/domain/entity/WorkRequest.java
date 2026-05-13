@@ -162,4 +162,12 @@ public class WorkRequest extends BaseTimeEntity {
         this.status = WorkRequestStatus.CANCELED;
         this.canceledAt = LocalDateTime.now();
     }
+
+    public void cancel(Employee reviewer, String reviewNote) {
+        this.status = WorkRequestStatus.CANCELED;
+        this.reviewedBy = reviewer;
+        this.reviewedAt = LocalDateTime.now();
+        this.reviewNote = reviewNote;
+        this.canceledAt = LocalDateTime.now();
+    }
 }
