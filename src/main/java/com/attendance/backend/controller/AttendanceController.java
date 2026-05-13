@@ -10,6 +10,7 @@ import com.attendance.backend.dto.attendance.WorkRequestActionResponse;
 import com.attendance.backend.dto.attendance.WorkRequestCreateResponse;
 import com.attendance.backend.dto.attendance.WorkRequestListResponse;
 import com.attendance.backend.dto.admin.CompanySettingResponse;
+import com.attendance.backend.exception.UnauthorizedException;
 import com.attendance.backend.security.CustomUserDetails;
 import com.attendance.backend.service.AttendanceService;
 import com.attendance.backend.service.WorkRequestService;
@@ -39,7 +40,7 @@ public class AttendanceController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody CheckInRequest request
     ) {
-        return ResponseEntity.ok(attendanceService.checkIn(userDetails.getEmployeeId(), request));
+        return ResponseEntity.ok(attendanceService.checkIn(requireEmployeeId(userDetails), request));
     }
 
     @PostMapping("/check-out")
@@ -47,21 +48,21 @@ public class AttendanceController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @Valid @RequestBody CheckOutRequest request
     ) {
-        return ResponseEntity.ok(attendanceService.checkOut(userDetails.getEmployeeId(), request));
+        return ResponseEntity.ok(attendanceService.checkOut(requireEmployeeId(userDetails), request));
     }
 
     @GetMapping("/today")
     public ResponseEntity<TodayAttendanceStatusResponse> getTodayStatus(
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(attendanceService.getTodayStatus(userDetails.getEmployeeId()));
+        return ResponseEntity.ok(attendanceService.getTodayStatus(requireEmployeeId(userDetails)));
     }
 
     @GetMapping("/company-setting")
     public ResponseEntity<CompanySettingResponse> getCompanySetting(
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(attendanceService.getCompanySetting(userDetails.getEmployeeId()));
+        return ResponseEntity.ok(attendanceService.getCompanySetting(requireEmployeeId(userDetails)));
     }
 
     @GetMapping("/public/company-setting")
@@ -74,14 +75,14 @@ public class AttendanceController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @RequestBody CreateWorkRequestRequest request
     ) {
-        return ResponseEntity.ok(workRequestService.createRequest(userDetails.getEmployeeId(), request));
+        return ResponseEntity.ok(workRequestService.createRequest(requireEmployeeId(userDetails), request));
     }
 
     @GetMapping("/work-requests")
     public ResponseEntity<WorkRequestListResponse> getWorkRequests(
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(workRequestService.getRequests(userDetails.getEmployeeId()));
+        return ResponseEntity.ok(workRequestService.getRequests(requireEmployeeId(userDetails)));
     }
 
     @PostMapping("/work-requests/{requestId}/cancel")
@@ -89,6 +90,13 @@ public class AttendanceController {
         @AuthenticationPrincipal CustomUserDetails userDetails,
         @org.springframework.web.bind.annotation.PathVariable Long requestId
     ) {
-        return ResponseEntity.ok(workRequestService.cancelRequest(userDetails.getEmployeeId(), requestId));
+        return ResponseEntity.ok(workRequestService.cancelRequest(requireEmployeeId(userDetails), requestId));
+    }
+
+    private Long requireEmployeeId(CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getEmployeeId() == null) {
+            throw new UnauthorizedException("로그인이 필요합니다.");
+        }
+        return userDetails.getEmployeeId();
     }
 }
