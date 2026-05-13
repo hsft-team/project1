@@ -162,8 +162,8 @@ public class WorkRequestService {
     public InternalWorkRequestResponse approveRequest(String adminEmployeeCode, Long requestId, String reviewNote) {
         Employee admin = getAdmin(adminEmployeeCode);
         WorkRequest request = getManageableRequest(admin, requestId);
-        if (!request.isPending()) {
-            throw new BusinessException("승인 대기 중인 신청만 승인할 수 있습니다.");
+        if (request.getStatus() != WorkRequestStatus.PENDING && request.getStatus() != WorkRequestStatus.REJECTED) {
+            throw new BusinessException("승인 대기 또는 반려된 신청만 승인할 수 있습니다.");
         }
         request.approve(admin, normalizeReason(reviewNote));
         return toInternalResponse(request);
@@ -260,8 +260,10 @@ public class WorkRequestService {
     public InternalWorkRequestResponse cancelRequestForAdmin(String adminEmployeeCode, Long requestId, String reviewNote) {
         Employee admin = getAdmin(adminEmployeeCode);
         WorkRequest request = getManageableRequest(admin, requestId);
-        if (request.getStatus() != WorkRequestStatus.APPROVED && request.getStatus() != WorkRequestStatus.PENDING) {
-            throw new BusinessException("승인 대기 또는 승인된 신청만 취소할 수 있습니다.");
+        if (request.getStatus() != WorkRequestStatus.APPROVED
+            && request.getStatus() != WorkRequestStatus.PENDING
+            && request.getStatus() != WorkRequestStatus.REJECTED) {
+            throw new BusinessException("승인 대기, 승인 또는 반려된 신청만 취소할 수 있습니다.");
         }
         request.cancel(admin, normalizeReason(reviewNote));
         return toInternalResponse(request);
