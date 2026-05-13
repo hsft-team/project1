@@ -29,6 +29,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
@@ -44,6 +46,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class WorkRequestService {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkRequestService.class);
     private static final ZoneId SEOUL_ZONE_ID = ZoneId.of("Asia/Seoul");
     private static final List<WorkRequestStatus> ACTIVE_DUPLICATE_STATUSES =
         List.of(WorkRequestStatus.PENDING, WorkRequestStatus.APPROVED);
@@ -113,12 +116,10 @@ public class WorkRequestService {
 
     public WorkRequestListResponse getRequests(Long employeeId) {
         Employee employee = getEmployee(employeeId);
-        CompanySetting setting = getCompanySetting(employee);
-        List<WorkRequestResponse> requests = workRequestRepository.findAllByEmployeeIdOrderByRequestDateDescCreatedAtDesc(employeeId)
-            .stream()
-            .map(this::toResponse)
-            .toList();
-        return new WorkRequestListResponse(isWorkRequestApprovalRequired(employee, setting), requests);
+        return new WorkRequestListResponse(
+            resolveApprovalRequiredForList(employee),
+            loadRequestResponses(employeeId)
+        );
     }
 
     @Transactional
@@ -355,6 +356,31 @@ public class WorkRequestService {
     private CompanySetting getCompanySetting(Employee employee) {
         return companySettingRepository.findByCompany(employee.getCompany())
             .orElseThrow(() -> new ResourceNotFoundException("회사 설정을 찾을 수 없습니다."));
+    }
+
+    private boolean resolveApprovalRequiredForList(Employee employee) {
+        try {
+            return isWorkRequestApprovalRequired(employee, getCompanySetting(employee));
+        } catch (RuntimeException exception) {
+            log.warn(
+                "Failed to resolve work request approval setting. employeeId={}",
+                employee.getId(),
+                exception
+            );
+            return true;
+        }
+    }
+
+    private List<WorkRequestResponse> loadRequestResponses(Long employeeId) {
+        try {
+            return workRequestRepository.findAllByEmployeeIdOrderByRequestDateDescCreatedAtDesc(employeeId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to load work request list. employeeId={}", employeeId, exception);
+            return List.of();
+        }
     }
 
     private boolean isWorkRequestApprovalRequired(Employee employee, CompanySetting setting) {
