@@ -148,7 +148,10 @@ public class WorkRequestService {
         return new InternalWorkRequestListResponse(
             isWorkRequestApprovalRequired(admin, setting),
             isWorkplaceScopedAdmin(admin),
-            requests.stream().map(this::toInternalResponse).toList()
+            requests.stream()
+                .filter(request -> request.getStatus() != WorkRequestStatus.CANCELED)
+                .map(this::toInternalResponse)
+                .toList()
         );
     }
 
@@ -395,6 +398,7 @@ public class WorkRequestService {
         try {
             return workRequestRepository.findAllByEmployeeIdOrderByRequestDateDescCreatedAtDesc(employeeId)
                 .stream()
+                .filter(request -> request.getStatus() != WorkRequestStatus.CANCELED)
                 .map(this::toResponse)
                 .toList();
         } catch (RuntimeException exception) {
