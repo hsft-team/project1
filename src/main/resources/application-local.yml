@@ -28,3 +28,9 @@ invite:
 internal:
   api:
     key: ${INTERNAL_API_KEY:local-admin-web-key}
+
+platform:
+  policy:
+    enabled: ${PLATFORM_POLICY_ENABLED:false}
+    base-url: ${PLATFORM_POLICY_BASE_URL:http://localhost:8092}
+    internal-api-key: ${PLATFORM_POLICY_INTERNAL_API_KEY:local-platform-key}

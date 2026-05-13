@@ -29,7 +29,12 @@ import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties({JwtProperties.class, InviteProperties.class, InternalApiProperties.class})
+@EnableConfigurationProperties({
+    JwtProperties.class,
+    InviteProperties.class,
+    InternalApiProperties.class,
+    PlatformPolicyClientProperties.class
+})
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;

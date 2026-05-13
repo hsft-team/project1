@@ -39,6 +39,9 @@ public class CompanySetting extends BaseTimeEntity {
     @Column(name = "enforce_single_device_login", nullable = false, columnDefinition = "boolean default true")
     private boolean enforceSingleDeviceLogin = true;
 
+    @Column(name = "work_request_approval_required", nullable = false, columnDefinition = "boolean default true")
+    private boolean workRequestApprovalRequired = true;
+
     protected CompanySetting() {
     }
 
@@ -76,8 +79,16 @@ public class CompanySetting extends BaseTimeEntity {
         return enforceSingleDeviceLogin;
     }
 
+    public boolean isWorkRequestApprovalRequired() {
+        return workRequestApprovalRequired;
+    }
+
     public void updateAllowedRadiusMeters(Integer allowedRadiusMeters) {
         this.allowedRadiusMeters = allowedRadiusMeters;
+    }
+
+    public void updateLateAfterTime(LocalTime lateAfterTime) {
+        this.lateAfterTime = lateAfterTime;
     }
 
     public void updateNoticeMessage(String noticeMessage) {
@@ -90,5 +101,9 @@ public class CompanySetting extends BaseTimeEntity {
 
     public void updateEnforceSingleDeviceLogin(boolean enforceSingleDeviceLogin) {
         this.enforceSingleDeviceLogin = enforceSingleDeviceLogin;
+    }
+
+    public void updateWorkRequestApprovalRequired(boolean workRequestApprovalRequired) {
+        this.workRequestApprovalRequired = workRequestApprovalRequired;
     }
 }

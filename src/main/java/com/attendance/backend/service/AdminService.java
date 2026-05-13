@@ -24,6 +24,9 @@ import com.attendance.backend.dto.admin.UpdateAttendanceRadiusRequest;
 import com.attendance.backend.dto.admin.UpdateCompanyLocationRequest;
 import com.attendance.backend.dto.admin.WorkplaceResponse;
 import com.attendance.backend.dto.internal.InternalAttendanceRowResponse;
+import com.attendance.backend.dto.internal.InternalCompanyDetailResponse;
+import com.attendance.backend.dto.internal.InternalCompanySummaryResponse;
+import com.attendance.backend.dto.internal.InternalCompanyUpdateRequest;
 import com.attendance.backend.dto.internal.InternalDashboardResponse;
 import com.attendance.backend.dto.internal.InternalDashboardSummaryResponse;
 import com.attendance.backend.dto.internal.InternalEmployeeFormResponse;
@@ -65,6 +68,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -108,6 +112,7 @@ public class AdminService {
     private final InviteProperties inviteProperties;
     private final PasswordEncoder passwordEncoder;
     private final DataSource dataSource;
+    private final PlatformPolicyService platformPolicyService;
 
     public AdminService(
         EmployeeRepository employeeRepository,
@@ -119,7 +124,8 @@ public class AdminService {
         AttendanceExcelService attendanceExcelService,
         InviteProperties inviteProperties,
         PasswordEncoder passwordEncoder,
-        DataSource dataSource
+        DataSource dataSource,
+        PlatformPolicyService platformPolicyService
     ) {
         this.employeeRepository = employeeRepository;
         this.attendanceRecordRepository = attendanceRecordRepository;
@@ -131,6 +137,7 @@ public class AdminService {
         this.inviteProperties = inviteProperties;
         this.passwordEncoder = passwordEncoder;
         this.dataSource = dataSource;
+        this.platformPolicyService = platformPolicyService;
     }
 
     public List<EmployeeSummaryResponse> getEmployees(Long adminEmployeeId) {
@@ -164,6 +171,38 @@ public class AdminService {
             employee.getRole().name(),
             employee.isActive()
         );
+    }
+
+    public List<InternalCompanySummaryResponse> getCompanySummaries() {
+        return companyRepository.findAll().stream()
+            .sorted(Comparator.comparing(Company::getCreatedAt).reversed())
+            .map(this::buildCompanySummary)
+            .toList();
+    }
+
+    public InternalCompanyDetailResponse getCompanyDetail(Long companyId) {
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("회사를 찾을 수 없습니다."));
+        return buildCompanyDetail(company);
+    }
+
+    @Transactional
+    public InternalCompanyDetailResponse updateCompanyForPlatform(Long companyId, InternalCompanyUpdateRequest request) {
+        Company company = companyRepository.findById(companyId)
+            .orElseThrow(() -> new ResourceNotFoundException("회사를 찾을 수 없습니다."));
+        CompanySetting setting = getCompanySetting(company);
+
+        validateCompanyUpdateRequest(request, companyId);
+
+        company.updateName(request.companyName().trim());
+        company.updateLocation(request.latitude(), request.longitude());
+        setting.updateAllowedRadiusMeters(request.allowedRadiusMeters());
+        setting.updateLateAfterTime(request.lateAfterTime());
+        setting.updateNoticeMessage(normalizeNoticeMessage(request.noticeMessage()));
+        setting.updateMobileSkinKey(normalizeMobileSkinKey(request.mobileSkinKey()));
+        setting.updateEnforceSingleDeviceLogin(request.enforceSingleDeviceLogin());
+
+        return buildCompanyDetail(company);
     }
 
     @Transactional
@@ -242,6 +281,7 @@ public class AdminService {
     @Transactional
     public InternalEmployeeInviteResponse createEmployeeInviteForAdmin(String adminEmployeeCode, InternalEmployeeInviteCreateRequest request) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         assertCanAddEmployee(admin.getCompany());
         EmployeeRole role = parseRole(request.getRole());
         validateRoleAssignment(admin, role, request.getWorkplaceId());
@@ -310,6 +350,7 @@ public class AdminService {
 
     public byte[] exportMonthlyAttendanceExcel(Long adminEmployeeId, int year, int month) {
         Employee admin = getEmployee(adminEmployeeId);
+        assertStatisticsFeatureEnabled(admin.getCompany().getId());
         YearMonth yearMonth;
         try {
             yearMonth = YearMonth.of(year, month);
@@ -350,6 +391,7 @@ public class AdminService {
             setting.getNoticeMessage(),
             setting.getMobileSkinKey(),
             setting.isEnforceSingleDeviceLogin(),
+            setting.isWorkRequestApprovalRequired(),
             "회사 위치가 수정되었습니다."
         );
     }
@@ -375,6 +417,7 @@ public class AdminService {
             setting.getNoticeMessage(),
             setting.getMobileSkinKey(),
             setting.isEnforceSingleDeviceLogin(),
+            setting.isWorkRequestApprovalRequired(),
             "출근 반경이 수정되었습니다."
         );
     }
@@ -441,6 +484,7 @@ public class AdminService {
             setting.getNoticeMessage(),
             normalizeMobileSkinKey(setting.getMobileSkinKey()),
             setting.isEnforceSingleDeviceLogin(),
+            setting.isWorkRequestApprovalRequired(),
             isWorkplaceScopedAdmin(admin),
             getAssignedWorkplaceId(admin),
             workplaces
@@ -515,6 +559,7 @@ public class AdminService {
         setting.updateNoticeMessage(normalizeNoticeMessage(request.getNoticeMessage()));
         setting.updateMobileSkinKey(normalizeMobileSkinKey(request.getMobileSkinKey()));
         setting.updateEnforceSingleDeviceLogin(request.isEnforceSingleDeviceLogin());
+        setting.updateWorkRequestApprovalRequired(request.isWorkRequestApprovalRequired());
     }
 
     @Transactional
@@ -570,6 +615,7 @@ public class AdminService {
         int pageSize
     ) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         List<Employee> employees = getEmployeeList(admin, showDeleted, workplaceId);
         Map<Long, AttendanceRecord> recordsByEmployeeId = attendanceRecordRepository
             .findAllByEmployeeCompanyIdAndAttendanceDate(admin.getCompany().getId(), LocalDate.now(SEOUL_ZONE_ID))
@@ -621,6 +667,7 @@ public class AdminService {
 
     public InternalDashboardResponse getTodayDashboardForAdmin(String adminEmployeeCode, String filter, Long workplaceId) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertStatisticsFeatureEnabled(admin.getCompany().getId());
         List<Employee> employees = getEmployeeList(admin, false, workplaceId);
         Map<Long, AttendanceRecord> recordsByEmployeeId = attendanceRecordRepository
             .findAllByEmployeeCompanyIdAndAttendanceDate(admin.getCompany().getId(), LocalDate.now(SEOUL_ZONE_ID))
@@ -679,6 +726,7 @@ public class AdminService {
         Long workplaceId
     ) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertStatisticsFeatureEnabled(admin.getCompany().getId());
         YearMonth yearMonth;
         try {
             yearMonth = YearMonth.of(year, month);
@@ -776,6 +824,8 @@ public class AdminService {
     }
 
     public InternalEmployeeFormResponse getEmployeeFormForAdmin(String adminEmployeeCode, Long employeeId) {
+        Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
         if (employee.isDeleted()) {
             throw new BusinessException("삭제된 직원은 수정할 수 없습니다. 먼저 복구해 주세요.");
@@ -795,6 +845,7 @@ public class AdminService {
     @Transactional
     public void createEmployeeForAdmin(String adminEmployeeCode, InternalEmployeeUpsertRequest request) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         assertCanAddEmployee(admin.getCompany());
         EmployeeRole role = parseManageableRole(request.getRole());
         validateRoleAssignment(admin, role, request.getWorkplaceId());
@@ -822,6 +873,7 @@ public class AdminService {
     @Transactional
     public void updateEmployeeForAdmin(String adminEmployeeCode, Long employeeId, InternalEmployeeUpsertRequest request) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
         if (employee.isDeleted()) {
             throw new BusinessException("삭제된 직원은 수정할 수 없습니다. 먼저 복구해 주세요.");
@@ -850,6 +902,7 @@ public class AdminService {
     @Transactional
     public void updateEmployeeUsageForAdmin(String adminEmployeeCode, Long employeeId, boolean active) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
 
         if (employee.isDeleted()) {
@@ -869,6 +922,8 @@ public class AdminService {
 
     @Transactional
     public void resetEmployeeDeviceForAdmin(String adminEmployeeCode, Long employeeId) {
+        Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
         if (employee.isDeleted()) {
             throw new BusinessException("삭제된 직원의 단말은 초기화할 수 없습니다.");
@@ -879,6 +934,7 @@ public class AdminService {
     @Transactional
     public void deleteEmployeeForAdmin(String adminEmployeeCode, Long employeeId) {
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
 
         if (admin.getId().equals(employee.getId())) {
@@ -894,6 +950,8 @@ public class AdminService {
 
     @Transactional
     public void restoreEmployeeForAdmin(String adminEmployeeCode, Long employeeId) {
+        Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Employee employee = getEditableEmployee(adminEmployeeCode, employeeId);
 
         if (!employee.isDeleted()) {
@@ -910,6 +968,7 @@ public class AdminService {
         }
 
         Employee admin = getEmployeeByCode(adminEmployeeCode);
+        assertEmployeeManagementFeatureEnabled(admin.getCompany().getId());
         Set<String> existingCodes = employeeRepository.findAllByCompanyIdOrderByNameAsc(admin.getCompany().getId()).stream()
             .map(Employee::getEmployeeCode)
             .collect(Collectors.toCollection(HashSet::new));
@@ -979,6 +1038,73 @@ public class AdminService {
             .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
     }
 
+    private InternalCompanySummaryResponse buildCompanySummary(Company company) {
+        CompanySetting setting = getCompanySetting(company);
+        List<Employee> employees = employeeRepository.findAllByCompanyIdOrderByNameAsc(company.getId());
+        List<Employee> activeEmployees = employees.stream()
+            .filter(employee -> !employee.isDeleted() && employee.isActive() && employee.getRole() != EmployeeRole.ADMIN)
+            .toList();
+        Employee primaryAdmin = resolvePrimaryAdmin(employees);
+
+        return new InternalCompanySummaryResponse(
+            company.getId(),
+            company.getName(),
+            company.getPlan().name(),
+            company.getEmployeeLimit(),
+            company.getWorkplaceLimit(),
+            company.getLatitude(),
+            company.getLongitude(),
+            setting.getAllowedRadiusMeters(),
+            employees.stream().filter(employee -> !employee.isDeleted() && employee.getRole() != EmployeeRole.ADMIN).count(),
+            activeEmployees.size(),
+            workplaceRepository.countByCompanyId(company.getId()),
+            primaryAdmin == null ? null : primaryAdmin.getEmployeeCode(),
+            primaryAdmin == null ? null : primaryAdmin.getName(),
+            company.getCreatedAt(),
+            company.getUpdatedAt()
+        );
+    }
+
+    private InternalCompanyDetailResponse buildCompanyDetail(Company company) {
+        CompanySetting setting = getCompanySetting(company);
+        List<Employee> employees = employeeRepository.findAllByCompanyIdOrderByNameAsc(company.getId());
+        Employee primaryAdmin = resolvePrimaryAdmin(employees);
+
+        return new InternalCompanyDetailResponse(
+            company.getId(),
+            company.getName(),
+            company.getPlan().name(),
+            company.getEmployeeLimit(),
+            company.getWorkplaceLimit(),
+            company.getLatitude(),
+            company.getLongitude(),
+            setting.getAllowedRadiusMeters(),
+            setting.getLateAfterTime(),
+            setting.getNoticeMessage(),
+            normalizeMobileSkinKey(setting.getMobileSkinKey()),
+            setting.isEnforceSingleDeviceLogin(),
+            employees.stream().filter(employee -> !employee.isDeleted() && employee.getRole() != EmployeeRole.ADMIN).count(),
+            employees.stream().filter(employee -> !employee.isDeleted() && employee.isActive() && employee.getRole() != EmployeeRole.ADMIN).count(),
+            workplaceRepository.countByCompanyId(company.getId()),
+            primaryAdmin == null ? null : primaryAdmin.getEmployeeCode(),
+            primaryAdmin == null ? null : primaryAdmin.getName(),
+            company.getCreatedAt(),
+            company.getUpdatedAt()
+        );
+    }
+
+    private Employee resolvePrimaryAdmin(List<Employee> employees) {
+        return employees.stream()
+            .filter(employee -> employee.getRole() == EmployeeRole.ADMIN)
+            .findFirst()
+            .orElse(
+                employees.stream()
+                    .filter(employee -> employee.getRole() == EmployeeRole.WORKPLACE_ADMIN)
+                    .findFirst()
+                    .orElse(null)
+            );
+    }
+
     private Employee getEmployeeByCode(String employeeCode) {
         Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
             .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
@@ -988,13 +1114,51 @@ public class AdminService {
         return employee;
     }
 
+    private void validateCompanyUpdateRequest(InternalCompanyUpdateRequest request, Long companyId) {
+        if (request == null) {
+            throw new BusinessException("회사 수정 요청이 비어 있습니다.");
+        }
+        if (!StringUtils.hasText(request.companyName())) {
+            throw new BusinessException("회사명을 입력해 주세요.");
+        }
+        if (request.companyName().trim().length() > 100) {
+            throw new BusinessException("회사명은 100자 이하로 입력해 주세요.");
+        }
+        companyRepository.findByName(request.companyName().trim())
+            .filter(existingCompany -> !Objects.equals(existingCompany.getId(), companyId))
+            .ifPresent(existingCompany -> {
+                throw new BusinessException("이미 사용 중인 회사명입니다.");
+            });
+
+        if (request.latitude() == null || request.longitude() == null) {
+            throw new BusinessException("회사 위치 좌표를 입력해 주세요.");
+        }
+        if (request.latitude() < -90 || request.latitude() > 90) {
+            throw new BusinessException("위도 값이 올바르지 않습니다.");
+        }
+        if (request.longitude() < -180 || request.longitude() > 180) {
+            throw new BusinessException("경도 값이 올바르지 않습니다.");
+        }
+        if (request.allowedRadiusMeters() == null || request.allowedRadiusMeters() <= 0) {
+            throw new BusinessException("허용 반경은 1m 이상이어야 합니다.");
+        }
+        if (request.lateAfterTime() == null) {
+            throw new BusinessException("지각 기준 시간을 입력해 주세요.");
+        }
+        if (StringUtils.hasText(request.noticeMessage()) && request.noticeMessage().trim().length() > 1000) {
+            throw new BusinessException("공지 메시지는 1000자 이하로 입력해 주세요.");
+        }
+    }
+
     private CompanySetting getCompanySetting(Company company) {
         return companySettingRepository.findByCompany(company)
             .orElseThrow(() -> new ResourceNotFoundException("회사 설정을 찾을 수 없습니다."));
     }
 
     private void assertCanAddEmployee(Company company) {
-        Integer employeeLimit = company.getEmployeeLimit();
+        Integer employeeLimit = platformPolicyService.getCompanyPolicy(company.getId())
+            .map(policy -> policy.maxEmployeeCount())
+            .orElse(company.getEmployeeLimit());
         if (employeeLimit == null) {
             return;
         }
@@ -1006,6 +1170,22 @@ public class AdminService {
         if (currentEmployees >= employeeLimit) {
             throw new BusinessException("직원 추가 한도(" + employeeLimit + "명)를 초과했습니다. 플랫폼 관리자에게 등급 또는 제한값 조정을 요청해 주세요.");
         }
+    }
+
+    private void assertStatisticsFeatureEnabled(Long companyId) {
+        platformPolicyService.getCompanyPolicy(companyId)
+            .filter(policy -> !policy.featureStatisticsEnabled())
+            .ifPresent(policy -> {
+                throw new BusinessException("이 회사는 현재 통계 기능 사용이 제한되어 있습니다. 플랫폼 관리자에게 문의해 주세요.");
+            });
+    }
+
+    private void assertEmployeeManagementFeatureEnabled(Long companyId) {
+        platformPolicyService.getCompanyPolicy(companyId)
+            .filter(policy -> !policy.featureEmployeeManagementEnabled())
+            .ifPresent(policy -> {
+                throw new BusinessException("이 회사는 현재 직원 관리 기능 사용이 제한되어 있습니다. 플랫폼 관리자에게 문의해 주세요.");
+            });
     }
 
     private List<Employee> getEmployeeList(Employee admin, boolean showDeleted, Long workplaceId) {

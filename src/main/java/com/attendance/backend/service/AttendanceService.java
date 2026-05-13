@@ -44,24 +44,28 @@ public class AttendanceService {
     private final CompanyRepository companyRepository;
     private final CompanySettingRepository companySettingRepository;
     private final AttendanceActionLogService attendanceActionLogService;
+    private final PlatformPolicyService platformPolicyService;
 
     public AttendanceService(
         EmployeeRepository employeeRepository,
         AttendanceRecordRepository attendanceRecordRepository,
         CompanyRepository companyRepository,
         CompanySettingRepository companySettingRepository,
-        AttendanceActionLogService attendanceActionLogService
+        AttendanceActionLogService attendanceActionLogService,
+        PlatformPolicyService platformPolicyService
     ) {
         this.employeeRepository = employeeRepository;
         this.attendanceRecordRepository = attendanceRecordRepository;
         this.companyRepository = companyRepository;
         this.companySettingRepository = companySettingRepository;
         this.attendanceActionLogService = attendanceActionLogService;
+        this.platformPolicyService = platformPolicyService;
     }
 
     @Transactional
     public CheckInResponse checkIn(Long employeeId, CheckInRequest request) {
         Employee employee = getEmployee(employeeId);
+        assertAttendanceFeatureEnabled(employee.getCompany().getId());
         LocalDate today = currentDateInSeoul();
         Double distanceMeters = null;
 
@@ -119,6 +123,7 @@ public class AttendanceService {
     @Transactional
     public CheckOutResponse checkOut(Long employeeId, CheckOutRequest request) {
         Employee employee = getEmployee(employeeId);
+        assertAttendanceFeatureEnabled(employee.getCompany().getId());
         LocalDate today = currentDateInSeoul();
         Double distanceMeters = null;
 
@@ -152,6 +157,7 @@ public class AttendanceService {
 
     public TodayAttendanceStatusResponse getTodayStatus(Long employeeId) {
         Employee employee = getEmployee(employeeId);
+        assertAttendanceFeatureEnabled(employee.getCompany().getId());
         LocalDate today = currentDateInSeoul();
         return attendanceRecordRepository.findByEmployeeIdAndAttendanceDate(employeeId, today)
             .map(record -> new TodayAttendanceStatusResponse(
@@ -176,6 +182,7 @@ public class AttendanceService {
 
     public CompanySettingResponse getCompanySetting(Long employeeId) {
         Employee employee = getEmployee(employeeId);
+        assertAttendanceFeatureEnabled(employee.getCompany().getId());
         Company company = employee.getCompany();
         CompanySetting setting = getCompanySetting(company);
         Workplace workplace = employee.getWorkplace();
@@ -194,6 +201,7 @@ public class AttendanceService {
                 : workplace.getNoticeMessage(),
             setting.getMobileSkinKey(),
             setting.isEnforceSingleDeviceLogin(),
+            setting.isWorkRequestApprovalRequired(),
             "회사 설정 조회가 완료되었습니다."
         );
     }
@@ -201,6 +209,7 @@ public class AttendanceService {
     public CompanySettingResponse getPublicCompanySetting() {
         Company company = companyRepository.findFirstByOrderByIdAsc()
             .orElseThrow(() -> new ResourceNotFoundException("회사를 찾을 수 없습니다."));
+        assertAttendanceFeatureEnabled(company.getId());
         CompanySetting setting = getCompanySetting(company);
 
         return new CompanySettingResponse(
@@ -215,6 +224,7 @@ public class AttendanceService {
             setting.getNoticeMessage(),
             setting.getMobileSkinKey(),
             setting.isEnforceSingleDeviceLogin(),
+            setting.isWorkRequestApprovalRequired(),
             "회사 설정 조회가 완료되었습니다."
         );
     }
@@ -240,6 +250,14 @@ public class AttendanceService {
     private boolean isLate(LocalTime checkInTime, LocalTime lateAfterTime) {
         return checkInTime.truncatedTo(ChronoUnit.MINUTES)
             .isAfter(lateAfterTime.truncatedTo(ChronoUnit.MINUTES));
+    }
+
+    private void assertAttendanceFeatureEnabled(Long companyId) {
+        platformPolicyService.getCompanyPolicy(companyId)
+            .filter(policy -> !policy.featureAttendanceEnabled())
+            .ifPresent(policy -> {
+                throw new BusinessException("이 회사는 현재 출근 기능 사용이 제한되어 있습니다. 플랫폼 관리자에게 문의해 주세요.");
+            });
     }
 
     private void validateMockLocation(Boolean mockLocation, String actionLabel) {
