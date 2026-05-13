@@ -64,6 +64,7 @@ public class WorkRequestSchemaInitializer implements ApplicationRunner {
                 request_type varchar(20) NOT NULL,
                 status varchar(20) NOT NULL,
                 half_day_type varchar(20),
+                occasion_type varchar(40),
                 request_date date NOT NULL,
                 early_leave_minutes integer,
                 reason varchar(500),
@@ -81,6 +82,7 @@ public class WorkRequestSchemaInitializer implements ApplicationRunner {
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS request_type varchar(20) NOT NULL");
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS status varchar(20) NOT NULL");
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS half_day_type varchar(20)");
+        jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS occasion_type varchar(40)");
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS request_date date NOT NULL");
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS early_leave_minutes integer");
         jdbcTemplate.execute("ALTER TABLE work_requests ADD COLUMN IF NOT EXISTS reason varchar(500)");

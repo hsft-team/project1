@@ -43,6 +43,10 @@ public class WorkRequest extends BaseTimeEntity {
     @Column(length = 20)
     private HalfDayType halfDayType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private SpecialLeaveOccasionType occasionType;
+
     @Column(nullable = false)
     private LocalDate requestDate;
 
@@ -72,6 +76,7 @@ public class WorkRequest extends BaseTimeEntity {
         WorkRequestType requestType,
         WorkRequestStatus status,
         HalfDayType halfDayType,
+        SpecialLeaveOccasionType occasionType,
         LocalDate requestDate,
         Integer earlyLeaveMinutes,
         String reason
@@ -81,6 +86,7 @@ public class WorkRequest extends BaseTimeEntity {
         this.requestType = requestType;
         this.status = status;
         this.halfDayType = halfDayType;
+        this.occasionType = occasionType;
         this.requestDate = requestDate;
         this.earlyLeaveMinutes = earlyLeaveMinutes;
         this.reason = reason;
@@ -108,6 +114,10 @@ public class WorkRequest extends BaseTimeEntity {
 
     public HalfDayType getHalfDayType() {
         return halfDayType;
+    }
+
+    public SpecialLeaveOccasionType getOccasionType() {
+        return occasionType;
     }
 
     public LocalDate getRequestDate() {

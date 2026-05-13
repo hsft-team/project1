@@ -9,6 +9,8 @@ public record WorkRequestResponse(
     String requestDate,
     String halfDayType,
     String halfDayTypeLabel,
+    String occasionType,
+    String occasionTypeLabel,
     Integer earlyLeaveMinutes,
     String reason,
     boolean cancelable,

@@ -4,6 +4,7 @@ import com.attendance.backend.domain.entity.CompanySetting;
 import com.attendance.backend.domain.entity.Employee;
 import com.attendance.backend.domain.entity.EmployeeRole;
 import com.attendance.backend.domain.entity.HalfDayType;
+import com.attendance.backend.domain.entity.SpecialLeaveOccasionType;
 import com.attendance.backend.domain.entity.WorkRequest;
 import com.attendance.backend.domain.entity.WorkRequestStatus;
 import com.attendance.backend.domain.entity.WorkRequestType;
@@ -80,6 +81,7 @@ public class WorkRequestService {
         WorkRequestType requestType = parseRequestType(request.getRequestType());
         LocalDate requestDate = parseRequestDate(request.getRequestDate());
         HalfDayType halfDayType = parseHalfDayType(requestType, request.getHalfDayType());
+        SpecialLeaveOccasionType occasionType = parseOccasionType(requestType, request.getOccasionType());
         Integer earlyLeaveMinutes = normalizeEarlyLeaveMinutes(requestType, request.getEarlyLeaveMinutes());
         String reason = normalizeReason(request.getReason());
 
@@ -96,6 +98,7 @@ public class WorkRequestService {
                 requestType,
                 initialStatus,
                 halfDayType,
+                occasionType,
                 requestDate,
                 earlyLeaveMinutes,
                 reason
@@ -109,8 +112,8 @@ public class WorkRequestService {
         return new WorkRequestCreateResponse(
             toResponse(saved),
             initialStatus == WorkRequestStatus.PENDING
-                ? "근무 신청이 등록되었습니다. 관리자 승인 후 반영됩니다."
-                : "근무 신청이 즉시 반영되었습니다."
+                ? "휴가 신청이 등록되었습니다. 관리자 승인 후 반영됩니다."
+                : "휴가 신청이 즉시 반영되었습니다."
         );
     }
 
@@ -176,6 +179,7 @@ public class WorkRequestService {
             request.getRequestType(),
             request.getRequestDate(),
             request.getHalfDayType(),
+            request.getOccasionType(),
             request.getEarlyLeaveMinutes(),
             request.getReason()
         );
@@ -211,6 +215,7 @@ public class WorkRequestService {
                     String halfDayType = readCell(row, 3);
                     Integer earlyLeaveMinutes = parseOptionalInteger(readCell(row, 4), rowIndex + 1 + "행 유연근무분");
                     String reason = readCell(row, 5);
+                    String occasionType = readCell(row, 6);
                     Employee employee = getManageableEmployee(admin, employeeCode);
 
                     createApprovedAdminRequest(
@@ -219,6 +224,7 @@ public class WorkRequestService {
                         requestType,
                         requestDate,
                         halfDayType,
+                        occasionType,
                         earlyLeaveMinutes,
                         reason
                     );
@@ -267,12 +273,14 @@ public class WorkRequestService {
         String rawRequestType,
         String rawRequestDate,
         String rawHalfDayType,
+        String rawOccasionType,
         Integer rawEarlyLeaveMinutes,
         String rawReason
     ) {
         WorkRequestType requestType = parseRequestType(rawRequestType);
         LocalDate requestDate = parseRequestDate(rawRequestDate);
         HalfDayType halfDayType = parseHalfDayType(requestType, rawHalfDayType);
+        SpecialLeaveOccasionType occasionType = parseOccasionType(requestType, rawOccasionType);
         Integer earlyLeaveMinutes = normalizeEarlyLeaveMinutes(requestType, rawEarlyLeaveMinutes);
         String reason = normalizeReason(rawReason);
 
@@ -285,6 +293,7 @@ public class WorkRequestService {
                 requestType,
                 WorkRequestStatus.APPROVED,
                 halfDayType,
+                occasionType,
                 requestDate,
                 earlyLeaveMinutes,
                 reason
@@ -319,9 +328,14 @@ public class WorkRequestService {
 
     private List<WorkRequestType> conflictingRequestTypes(WorkRequestType requestType) {
         return switch (requestType) {
-            case VACATION -> List.of(WorkRequestType.VACATION, WorkRequestType.HALF_DAY, WorkRequestType.EARLY_LEAVE);
-            case HALF_DAY -> List.of(WorkRequestType.VACATION, WorkRequestType.HALF_DAY);
-            case EARLY_LEAVE -> List.of(WorkRequestType.VACATION, WorkRequestType.EARLY_LEAVE);
+            case VACATION, SPECIAL_LEAVE -> List.of(
+                WorkRequestType.VACATION,
+                WorkRequestType.HALF_DAY,
+                WorkRequestType.EARLY_LEAVE,
+                WorkRequestType.SPECIAL_LEAVE
+            );
+            case HALF_DAY -> List.of(WorkRequestType.VACATION, WorkRequestType.HALF_DAY, WorkRequestType.SPECIAL_LEAVE);
+            case EARLY_LEAVE -> List.of(WorkRequestType.VACATION, WorkRequestType.EARLY_LEAVE, WorkRequestType.SPECIAL_LEAVE);
         };
     }
 
@@ -436,10 +450,47 @@ public class WorkRequestService {
         if ("유연근무".equals(trimmed) || "조기퇴근".equals(trimmed)) {
             return WorkRequestType.EARLY_LEAVE;
         }
+        if ("경조사".equals(trimmed) || "특별휴가".equals(trimmed) || "특별 휴가".equals(trimmed)) {
+            return WorkRequestType.SPECIAL_LEAVE;
+        }
         try {
             return WorkRequestType.valueOf(normalized);
         } catch (IllegalArgumentException exception) {
             throw new BusinessException("지원하지 않는 신청 유형입니다.");
+        }
+    }
+
+    private SpecialLeaveOccasionType parseOccasionType(WorkRequestType requestType, String rawValue) {
+        if (requestType != WorkRequestType.SPECIAL_LEAVE) {
+            return null;
+        }
+        String trimmed = rawValue == null ? "" : rawValue.trim();
+        String normalized = trimmed.toUpperCase();
+        if ("본인결혼".equals(trimmed) || "본인 결혼".equals(trimmed) || "결혼".equals(trimmed)) {
+            return SpecialLeaveOccasionType.SELF_MARRIAGE;
+        }
+        if ("자녀결혼".equals(trimmed) || "자녀 결혼".equals(trimmed)) {
+            return SpecialLeaveOccasionType.CHILD_MARRIAGE;
+        }
+        if ("배우자출산".equals(trimmed) || "배우자 출산".equals(trimmed) || "출산".equals(trimmed)) {
+            return SpecialLeaveOccasionType.SPOUSE_CHILDBIRTH;
+        }
+        if ("가족사망".equals(trimmed) || "가족 사망".equals(trimmed) || "부고".equals(trimmed) || "장례".equals(trimmed)) {
+            return SpecialLeaveOccasionType.FAMILY_DEATH;
+        }
+        if ("조부모사망".equals(trimmed) || "조부모 사망".equals(trimmed)) {
+            return SpecialLeaveOccasionType.GRANDPARENT_DEATH;
+        }
+        if ("형제자매사망".equals(trimmed) || "형제자매 사망".equals(trimmed)) {
+            return SpecialLeaveOccasionType.SIBLING_DEATH;
+        }
+        if ("기타".equals(trimmed) || "기타경조사".equals(trimmed) || "기타 경조사".equals(trimmed)) {
+            return SpecialLeaveOccasionType.OTHER;
+        }
+        try {
+            return SpecialLeaveOccasionType.valueOf(normalized);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException("경조사 구분을 선택해 주세요.");
         }
     }
 
@@ -505,7 +556,7 @@ public class WorkRequestService {
         if (row == null) {
             return true;
         }
-        for (int index = 0; index <= 5; index++) {
+        for (int index = 0; index <= 6; index++) {
             if (StringUtils.hasText(readCell(row, index))) {
                 return false;
             }
@@ -551,6 +602,8 @@ public class WorkRequestService {
             request.getRequestDate().toString(),
             request.getHalfDayType() == null ? null : request.getHalfDayType().name(),
             halfDayLabel(request.getHalfDayType()),
+            request.getOccasionType() == null ? null : request.getOccasionType().name(),
+            occasionLabel(request.getOccasionType()),
             request.getEarlyLeaveMinutes(),
             request.getReason(),
             request.getStatus() == WorkRequestStatus.PENDING,
@@ -576,6 +629,8 @@ public class WorkRequestService {
             request.getRequestDate().toString(),
             request.getHalfDayType() == null ? null : request.getHalfDayType().name(),
             halfDayLabel(request.getHalfDayType()),
+            request.getOccasionType() == null ? null : request.getOccasionType().name(),
+            occasionLabel(request.getOccasionType()),
             request.getEarlyLeaveMinutes(),
             request.getReason(),
             request.getReviewedBy() == null ? null : request.getReviewedBy().getEmployeeCode(),
@@ -591,6 +646,7 @@ public class WorkRequestService {
             case VACATION -> "휴가";
             case HALF_DAY -> "반차";
             case EARLY_LEAVE -> "유연근무";
+            case SPECIAL_LEAVE -> "경조사";
         };
     }
 
@@ -608,6 +664,21 @@ public class WorkRequestService {
             return null;
         }
         return halfDayType == HalfDayType.MORNING ? "오전 반차" : "오후 반차";
+    }
+
+    private String occasionLabel(SpecialLeaveOccasionType occasionType) {
+        if (occasionType == null) {
+            return null;
+        }
+        return switch (occasionType) {
+            case SELF_MARRIAGE -> "본인 결혼";
+            case CHILD_MARRIAGE -> "자녀 결혼";
+            case SPOUSE_CHILDBIRTH -> "배우자 출산";
+            case FAMILY_DEATH -> "가족 사망";
+            case GRANDPARENT_DEATH -> "조부모 사망";
+            case SIBLING_DEATH -> "형제자매 사망";
+            case OTHER -> "기타 경조사";
+        };
     }
 
     private String formatDateTime(LocalDateTime value) {
