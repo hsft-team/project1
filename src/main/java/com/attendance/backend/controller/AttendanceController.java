@@ -15,6 +15,9 @@ import com.attendance.backend.security.CustomUserDetails;
 import com.attendance.backend.service.AttendanceService;
 import com.attendance.backend.service.WorkRequestService;
 import jakarta.validation.Valid;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/attendance")
 public class AttendanceController {
+
+    private static final Logger log = LoggerFactory.getLogger(AttendanceController.class);
 
     private final AttendanceService attendanceService;
     private final WorkRequestService workRequestService;
@@ -82,7 +87,13 @@ public class AttendanceController {
     public ResponseEntity<WorkRequestListResponse> getWorkRequests(
         @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(workRequestService.getRequests(requireEmployeeId(userDetails)));
+        Long employeeId = requireEmployeeId(userDetails);
+        try {
+            return ResponseEntity.ok(workRequestService.getRequests(employeeId));
+        } catch (RuntimeException exception) {
+            log.warn("Failed to get work requests. employeeId={}", employeeId, exception);
+            return ResponseEntity.ok(new WorkRequestListResponse(true, List.of()));
+        }
     }
 
     @PostMapping("/work-requests/{requestId}/cancel")
