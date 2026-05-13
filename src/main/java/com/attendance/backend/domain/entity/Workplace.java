@@ -38,6 +38,9 @@ public class Workplace extends BaseTimeEntity {
     @Column(name = "notice_message", length = 1000)
     private String noticeMessage;
 
+    @Column(name = "work_request_approval_required", nullable = false, columnDefinition = "boolean default true")
+    private boolean workRequestApprovalRequired = true;
+
     protected Workplace() {
     }
 
@@ -46,13 +49,15 @@ public class Workplace extends BaseTimeEntity {
                      Double latitude,
                      Double longitude,
                      Integer allowedRadiusMeters,
-                     String noticeMessage) {
+                     String noticeMessage,
+                     boolean workRequestApprovalRequired) {
         this.company = company;
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
         this.allowedRadiusMeters = allowedRadiusMeters;
         this.noticeMessage = noticeMessage;
+        this.workRequestApprovalRequired = workRequestApprovalRequired;
     }
 
     public Long getId() {
@@ -83,17 +88,23 @@ public class Workplace extends BaseTimeEntity {
         return noticeMessage;
     }
 
+    public boolean isWorkRequestApprovalRequired() {
+        return workRequestApprovalRequired;
+    }
+
     public void update(
         String name,
         Double latitude,
         Double longitude,
         Integer allowedRadiusMeters,
-        String noticeMessage
+        String noticeMessage,
+        boolean workRequestApprovalRequired
     ) {
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
         this.allowedRadiusMeters = allowedRadiusMeters;
         this.noticeMessage = noticeMessage;
+        this.workRequestApprovalRequired = workRequestApprovalRequired;
     }
 }

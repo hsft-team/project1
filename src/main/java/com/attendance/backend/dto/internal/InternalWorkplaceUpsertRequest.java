@@ -7,6 +7,7 @@ public class InternalWorkplaceUpsertRequest {
     private Double longitude;
     private Integer allowedRadiusMeters;
     private String noticeMessage;
+    private boolean workRequestApprovalRequired = true;
 
     public String getName() {
         return name;
@@ -46,5 +47,13 @@ public class InternalWorkplaceUpsertRequest {
 
     public void setNoticeMessage(String noticeMessage) {
         this.noticeMessage = noticeMessage;
+    }
+
+    public boolean isWorkRequestApprovalRequired() {
+        return workRequestApprovalRequired;
+    }
+
+    public void setWorkRequestApprovalRequired(boolean workRequestApprovalRequired) {
+        this.workRequestApprovalRequired = workRequestApprovalRequired;
     }
 }

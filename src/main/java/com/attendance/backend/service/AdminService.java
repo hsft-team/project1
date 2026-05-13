@@ -441,7 +441,8 @@ public class AdminService {
                 request.getLatitude(),
                 request.getLongitude(),
                 request.getAllowedRadiusMeters(),
-                request.getNoticeMessage()
+                request.getNoticeMessage(),
+                true
             )
         );
 
@@ -471,7 +472,8 @@ public class AdminService {
                 workplace.getLatitude(),
                 workplace.getLongitude(),
                 workplace.getAllowedRadiusMeters(),
-                workplace.getNoticeMessage()
+                workplace.getNoticeMessage(),
+                workplace.isWorkRequestApprovalRequired()
             ))
             .toList();
 
@@ -584,7 +586,8 @@ public class AdminService {
             request.getLatitude(),
             request.getLongitude(),
             request.getAllowedRadiusMeters(),
-            normalizeNoticeMessage(request.getNoticeMessage())
+            normalizeNoticeMessage(request.getNoticeMessage()),
+            request.isWorkRequestApprovalRequired()
         ));
     }
 
@@ -603,7 +606,8 @@ public class AdminService {
             request.getLatitude(),
             request.getLongitude(),
             request.getAllowedRadiusMeters(),
-            normalizeNoticeMessage(request.getNoticeMessage())
+            normalizeNoticeMessage(request.getNoticeMessage()),
+            request.isWorkRequestApprovalRequired()
         );
     }
 

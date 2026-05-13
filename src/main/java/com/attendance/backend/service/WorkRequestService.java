@@ -82,7 +82,7 @@ public class WorkRequestService {
 
         validateRequest(employee, requestType, requestDate, earlyLeaveMinutes, false);
 
-        WorkRequestStatus initialStatus = setting.isWorkRequestApprovalRequired()
+        WorkRequestStatus initialStatus = isWorkRequestApprovalRequired(employee, setting)
             ? WorkRequestStatus.PENDING
             : WorkRequestStatus.APPROVED;
 
@@ -118,7 +118,7 @@ public class WorkRequestService {
             .stream()
             .map(this::toResponse)
             .toList();
-        return new WorkRequestListResponse(setting.isWorkRequestApprovalRequired(), requests);
+        return new WorkRequestListResponse(isWorkRequestApprovalRequired(employee, setting), requests);
     }
 
     @Transactional
@@ -145,7 +145,7 @@ public class WorkRequestService {
             : workRequestRepository.findAllByCompanyIdOrderByStatusAscRequestDateDescCreatedAtDesc(admin.getCompany().getId());
 
         return new InternalWorkRequestListResponse(
-            setting.isWorkRequestApprovalRequired(),
+            isWorkRequestApprovalRequired(admin, setting),
             isWorkplaceScopedAdmin(admin),
             requests.stream().map(this::toInternalResponse).toList()
         );
@@ -355,6 +355,12 @@ public class WorkRequestService {
     private CompanySetting getCompanySetting(Employee employee) {
         return companySettingRepository.findByCompany(employee.getCompany())
             .orElseThrow(() -> new ResourceNotFoundException("회사 설정을 찾을 수 없습니다."));
+    }
+
+    private boolean isWorkRequestApprovalRequired(Employee employee, CompanySetting setting) {
+        return employee.getWorkplace() == null
+            ? setting.isWorkRequestApprovalRequired()
+            : employee.getWorkplace().isWorkRequestApprovalRequired();
     }
 
     private boolean isWorkplaceScopedAdmin(Employee admin) {

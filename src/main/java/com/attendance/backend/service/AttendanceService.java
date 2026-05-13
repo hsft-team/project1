@@ -201,7 +201,7 @@ public class AttendanceService {
                 : workplace.getNoticeMessage(),
             setting.getMobileSkinKey(),
             setting.isEnforceSingleDeviceLogin(),
-            setting.isWorkRequestApprovalRequired(),
+            workplace == null ? setting.isWorkRequestApprovalRequired() : workplace.isWorkRequestApprovalRequired(),
             "회사 설정 조회가 완료되었습니다."
         );
     }

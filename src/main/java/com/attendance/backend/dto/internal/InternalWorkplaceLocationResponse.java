@@ -6,6 +6,7 @@ public record InternalWorkplaceLocationResponse(
     Double latitude,
     Double longitude,
     Integer allowedRadiusMeters,
-    String noticeMessage
+    String noticeMessage,
+    boolean workRequestApprovalRequired
 ) {
 }
