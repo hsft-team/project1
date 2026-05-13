@@ -30,6 +30,7 @@ public class WorkRequestSchemaInitializer implements ApplicationRunner {
         }
 
         ensureWorkplaceApprovalColumn();
+        ensureCompanyApprovalColumn();
         ensureWorkRequestTable();
     }
 
@@ -43,6 +44,13 @@ public class WorkRequestSchemaInitializer implements ApplicationRunner {
     private void ensureWorkplaceApprovalColumn() {
         jdbcTemplate.execute("""
             ALTER TABLE workplaces
+            ADD COLUMN IF NOT EXISTS work_request_approval_required boolean NOT NULL DEFAULT true
+            """);
+    }
+
+    private void ensureCompanyApprovalColumn() {
+        jdbcTemplate.execute("""
+            ALTER TABLE company_settings
             ADD COLUMN IF NOT EXISTS work_request_approval_required boolean NOT NULL DEFAULT true
             """);
     }
