@@ -206,7 +206,7 @@ public class WorkRequestService {
                     String requestDate = readDateCell(row, 1);
                     String requestType = readCell(row, 2);
                     String halfDayType = readCell(row, 3);
-                    Integer earlyLeaveMinutes = parseOptionalInteger(readCell(row, 4), rowIndex + 1 + "행 조기퇴근분");
+                    Integer earlyLeaveMinutes = parseOptionalInteger(readCell(row, 4), rowIndex + 1 + "행 유연근무분");
                     String reason = readCell(row, 5);
                     Employee employee = getManageableEmployee(admin, employeeCode);
 
@@ -290,16 +290,25 @@ public class WorkRequestService {
         if (!allowHistoricalDate && requestDate.isBefore(LocalDate.now(SEOUL_ZONE_ID).minusMonths(1))) {
             throw new BusinessException("한 달 이전 날짜로는 신청할 수 없습니다.");
         }
-        if (workRequestRepository.existsByEmployeeIdAndRequestDateAndStatusIn(
+        if (workRequestRepository.existsByEmployeeIdAndRequestDateAndRequestTypeInAndStatusIn(
             employee.getId(),
             requestDate,
+            conflictingRequestTypes(requestType),
             ACTIVE_DUPLICATE_STATUSES
         )) {
-            throw new BusinessException("해당 날짜에는 이미 처리 중이거나 승인된 신청이 있습니다.");
+            throw new BusinessException("해당 날짜에는 함께 사용할 수 없는 처리 중이거나 승인된 신청이 있습니다.");
         }
         if (requestType == WorkRequestType.EARLY_LEAVE && employee.getWorkEndTime() == null && earlyLeaveMinutes == null) {
-            throw new BusinessException("조기퇴근 시간 정보를 확인할 수 없습니다.");
+            throw new BusinessException("유연근무 시간 정보를 확인할 수 없습니다.");
         }
+    }
+
+    private List<WorkRequestType> conflictingRequestTypes(WorkRequestType requestType) {
+        return switch (requestType) {
+            case VACATION -> List.of(WorkRequestType.VACATION, WorkRequestType.HALF_DAY, WorkRequestType.EARLY_LEAVE);
+            case HALF_DAY -> List.of(WorkRequestType.VACATION, WorkRequestType.HALF_DAY);
+            case EARLY_LEAVE -> List.of(WorkRequestType.VACATION, WorkRequestType.EARLY_LEAVE);
+        };
     }
 
     private WorkRequest getManageableRequest(Employee admin, Long requestId) {
@@ -458,10 +467,10 @@ public class WorkRequestService {
             return null;
         }
         if (earlyLeaveMinutes == null || earlyLeaveMinutes <= 0 || earlyLeaveMinutes % 30 != 0) {
-            throw new BusinessException("조기퇴근 시간은 30분 단위로 입력해 주세요.");
+            throw new BusinessException("유연근무 시간은 30분 단위로 입력해 주세요.");
         }
         if (earlyLeaveMinutes > 480) {
-            throw new BusinessException("조기퇴근 시간은 최대 480분까지 입력할 수 있습니다.");
+            throw new BusinessException("유연근무 시간은 최대 480분까지 입력할 수 있습니다.");
         }
         return earlyLeaveMinutes;
     }
@@ -566,7 +575,7 @@ public class WorkRequestService {
         return switch (requestType) {
             case VACATION -> "휴가";
             case HALF_DAY -> "반차";
-            case EARLY_LEAVE -> "조기퇴근";
+            case EARLY_LEAVE -> "유연근무";
         };
     }
 

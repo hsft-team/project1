@@ -2,6 +2,7 @@ package com.attendance.backend.domain.repository;
 
 import com.attendance.backend.domain.entity.WorkRequest;
 import com.attendance.backend.domain.entity.WorkRequestStatus;
+import com.attendance.backend.domain.entity.WorkRequestType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -25,5 +26,10 @@ public interface WorkRequestRepository extends JpaRepository<WorkRequest, Long> 
         Long workplaceId
     );
 
-    boolean existsByEmployeeIdAndRequestDateAndStatusIn(Long employeeId, LocalDate requestDate, List<WorkRequestStatus> statuses);
+    boolean existsByEmployeeIdAndRequestDateAndRequestTypeInAndStatusIn(
+        Long employeeId,
+        LocalDate requestDate,
+        List<WorkRequestType> requestTypes,
+        List<WorkRequestStatus> statuses
+    );
 }
